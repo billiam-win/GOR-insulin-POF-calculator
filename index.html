@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GOR Insulin Infusion Calculator (Proof-of-Concept WIP)</title>
+  <title>GOR Insulin Infusion Calculator (UMMC POC)</title>
   <style>
     :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
 
-    /* ✅ ALIGNMENT FIX: prevent padding/border from causing overflow on all devices */
+    /* ✅ Mobile/desktop layout sanity */
     *, *::before, *::after { box-sizing: border-box; }
 
     body { margin: 0; padding: 16px; background: #f6f7f9; }
@@ -16,7 +16,6 @@
     .sub { font-size: 12px; color: #555; margin: 0 0 14px; line-height: 1.4; }
     label { display: block; font-size: 12px; color: #333; margin: 12px 0 6px; }
 
-    /* ✅ ALIGNMENT FIX: keep fields inside grid columns, consistent height */
     input, select {
       width: 100%;
       max-width: 100%;
@@ -37,11 +36,24 @@
     button { width: 100%; margin-top: 14px; padding: 12px; border: 0; border-radius: 12px; font-size: 16px; cursor: pointer; }
     button.primary { background: #111827; color: #fff; }
     button.ghost { background: #eef2ff; }
+
     .out { margin-top: 14px; padding: 12px; border-radius: 12px; background: #f3f4f6; }
     .out p { margin: 6px 0; }
+
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
     .small { font-size: 12px; color: #444; }
-    .warn { font-size: 12px; color: #7c2d12; background: #fff7ed; border: 1px solid #fed7aa; padding: 10px; border-radius: 12px; margin-top: 12px; }
+
+    .warn {
+      font-size: 12px;
+      color: #7c2d12;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      padding: 10px;
+      border-radius: 12px;
+      margin-top: 12px;
+      line-height: 1.35;
+    }
+
     .pill { display:inline-block; padding:2px 8px; border-radius: 999px; background:#e5e7eb; font-size:12px; }
 
     /* big-drop warning */
@@ -56,53 +68,55 @@
       font-size: 12px;
       line-height: 1.35;
     }
-    /* ===== Reference Table ===== */
 
-.referenceSection {
-  margin-top: 18px;
-  padding-top: 10px;
-  border-top: 1px solid #e5e7eb;
-}
-
-.tableWrap {
-  width: 100%;
-  overflow-x: auto;   /* makes mobile scroll instead of breaking layout */
-}
-
-.refTable {
-  width: 100%;
-  min-width: 700px;   /* forces horizontal scroll on phones */
-  border-collapse: collapse;
-  font-size: 12px;
-}
-
-.refTable th,
-.refTable td {
-  border: 1px solid #e5e7eb;
-  padding: 6px 8px;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.refTable th {
-  background: #f3f4f6;
-  font-weight: 600;
-}
-
-.referenceNote {
-  margin-top: 8px;
-  font-size: 12px;
-  color: #555;
-}
-
+    /* ===== Reference Table (mobile-safe) ===== */
+    .referenceSection {
+      margin-top: 18px;
+      padding-top: 10px;
+      border-top: 1px solid #e5e7eb;
+    }
+    .referenceSummary {
+      cursor: pointer;
+      font-weight: 600;
+      user-select: none;
+      margin-top: 6px;
+    }
+    .tableWrap {
+      width: 100%;
+      overflow-x: auto; /* horizontal scroll on phone */
+      margin-top: 10px;
+    }
+    .refTable {
+      width: 100%;
+      min-width: 860px; /* forces scroll instead of squish/overlap */
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .refTable th, .refTable td {
+      border: 1px solid #e5e7eb;
+      padding: 6px 8px;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .refTable th {
+      background: #f3f4f6;
+      font-weight: 600;
+    }
+    .referenceNote {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #555;
+      line-height: 1.35;
+    }
   </style>
 </head>
 
 <body>
   <div class="card">
-    <h1>GOR Insulin Infusion Calculator (Proof of Concept WIP)</h1>
+    <h1>GOR Insulin Infusion Calculator (POC)</h1>
     <p class="sub">
-      Based off institutional policy rev. 2026. No data stored. Please refer to the policy guideline for the most up to date information and for data
+      Educational insulin infusion calculator derived from a clinical workflow. No data stored.
+      Verify against local institutional policy before clinical use.
     </p>
 
     <label for="scale">Current infusion scale</label>
@@ -129,7 +143,7 @@
     <div class="row">
       <input id="sameScale" type="checkbox" checked />
       <label for="sameScale" style="margin:0;">
-        Same scale since last BG check (needed so calculator can check for BG >150 x2 automatically)
+        Same scale since last BG check (needed for “two consecutive >150” rule)
       </label>
     </div>
 
@@ -137,11 +151,118 @@
     <button class="ghost" id="reset" type="button">Reset</button>
 
     <div class="warn">
-      Disclaimer: Decision support only. Just a tool not meant to replace clinical judgement or decision making, please consult the policy for the most up to date and correct info :)
-      <span class="pill">Version v0.4</span>
+      Disclaimer: Decision support only. Just a tool not meant to replace clinical judgement or decision making.
+      Please consult the policy for the most up to date and correct info :)
+      <span class="pill">Version v0.5</span>
     </div>
 
     <div class="out" id="out" style="display:none;"></div>
+
+    <!-- ===== Reference Table (collapsible, mobile-safe) ===== -->
+    <div class="referenceSection">
+      <details>
+        <summary class="referenceSummary">Show Reference Scale Tables</summary>
+
+        <div class="tableWrap">
+          <table class="refTable" aria-label="Reference scale tables">
+            <thead>
+              <tr>
+                <th>Scale</th>
+                <th>BG Range (mg/dL)</th>
+                <th>Rate (U/hr)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Scale A -->
+              <tr><td class="mono">A</td><td>80–99</td><td>0</td></tr>
+              <tr><td class="mono">A</td><td>100–104</td><td>1</td></tr>
+              <tr><td class="mono">A</td><td>105–121</td><td>2</td></tr>
+              <tr><td class="mono">A</td><td>122–138</td><td>3</td></tr>
+              <tr><td class="mono">A</td><td>139–154</td><td>4</td></tr>
+              <tr><td class="mono">A</td><td>155–171</td><td>5</td></tr>
+              <tr><td class="mono">A</td><td>172–188</td><td>6</td></tr>
+              <tr><td class="mono">A</td><td>189–204</td><td>7</td></tr>
+              <tr><td class="mono">A</td><td>205–221</td><td>8</td></tr>
+              <tr><td class="mono">A</td><td>222–238</td><td>9</td></tr>
+              <tr><td class="mono">A</td><td>239–254</td><td>10</td></tr>
+              <tr><td class="mono">A</td><td>255–271</td><td>11</td></tr>
+              <tr><td class="mono">A</td><td>272–288</td><td>12</td></tr>
+              <tr><td class="mono">A</td><td>289–304</td><td>13</td></tr>
+              <tr><td class="mono">A</td><td>305–321</td><td>14</td></tr>
+              <tr><td class="mono">A</td><td>322–338</td><td>15</td></tr>
+              <tr><td class="mono">A</td><td>339–354</td><td>16</td></tr>
+              <tr><td class="mono">A</td><td>355–371</td><td>17</td></tr>
+              <tr><td class="mono">A</td><td>372–388</td><td>18</td></tr>
+              <tr><td class="mono">A</td><td>389–399</td><td>19</td></tr>
+
+              <!-- Scale B -->
+              <tr><td class="mono">B</td><td>80–99</td><td>0</td></tr>
+              <tr><td class="mono">B</td><td>100–112</td><td>2</td></tr>
+              <tr><td class="mono">B</td><td>112–123</td><td>3</td></tr>
+              <tr><td class="mono">B</td><td>124–136</td><td>4</td></tr>
+              <tr><td class="mono">B</td><td>137–148</td><td>5</td></tr>
+              <tr><td class="mono">B</td><td>149–161</td><td>6</td></tr>
+              <tr><td class="mono">B</td><td>162–173</td><td>7</td></tr>
+              <tr><td class="mono">B</td><td>174–186</td><td>8</td></tr>
+              <tr><td class="mono">B</td><td>187–198</td><td>9</td></tr>
+              <tr><td class="mono">B</td><td>199–211</td><td>10</td></tr>
+              <tr><td class="mono">B</td><td>212–223</td><td>11</td></tr>
+              <tr><td class="mono">B</td><td>224–236</td><td>12</td></tr>
+              <tr><td class="mono">B</td><td>237–248</td><td>13</td></tr>
+              <tr><td class="mono">B</td><td>249–261</td><td>14</td></tr>
+              <tr><td class="mono">B</td><td>262–273</td><td>15</td></tr>
+              <tr><td class="mono">B</td><td>274–286</td><td>16</td></tr>
+              <tr><td class="mono">B</td><td>287–298</td><td>17</td></tr>
+              <tr><td class="mono">B</td><td>299–311</td><td>18</td></tr>
+              <tr><td class="mono">B</td><td>312–323</td><td>19</td></tr>
+              <tr><td class="mono">B</td><td>324–336</td><td>20</td></tr>
+              <tr><td class="mono">B</td><td>337–348</td><td>21</td></tr>
+              <tr><td class="mono">B</td><td>349–361</td><td>22</td></tr>
+              <tr><td class="mono">B</td><td>362–373</td><td>23</td></tr>
+              <tr><td class="mono">B</td><td>374–386</td><td>24</td></tr>
+              <tr><td class="mono">B</td><td>387–390</td><td>25</td></tr>
+
+              <!-- Scale C -->
+              <tr><td class="mono">C</td><td>80–99</td><td>0</td></tr>
+              <tr><td class="mono">C</td><td>100–104</td><td>2</td></tr>
+              <tr><td class="mono">C</td><td>105–114</td><td>3</td></tr>
+              <tr><td class="mono">C</td><td>115–124</td><td>4</td></tr>
+              <tr><td class="mono">C</td><td>125–134</td><td>5</td></tr>
+              <tr><td class="mono">C</td><td>135–144</td><td>6</td></tr>
+              <tr><td class="mono">C</td><td>145–154</td><td>7</td></tr>
+              <tr><td class="mono">C</td><td>155–164</td><td>8</td></tr>
+              <tr><td class="mono">C</td><td>165–174</td><td>9</td></tr>
+              <tr><td class="mono">C</td><td>175–184</td><td>10</td></tr>
+              <tr><td class="mono">C</td><td>185–194</td><td>11</td></tr>
+              <tr><td class="mono">C</td><td>195–204</td><td>12</td></tr>
+              <tr><td class="mono">C</td><td>205–214</td><td>13</td></tr>
+              <tr><td class="mono">C</td><td>215–224</td><td>14</td></tr>
+              <tr><td class="mono">C</td><td>225–234</td><td>15</td></tr>
+              <tr><td class="mono">C</td><td>235–244</td><td>16</td></tr>
+              <tr><td class="mono">C</td><td>245–254</td><td>17</td></tr>
+              <tr><td class="mono">C</td><td>255–264</td><td>18</td></tr>
+              <tr><td class="mono">C</td><td>265–274</td><td>19</td></tr>
+              <tr><td class="mono">C</td><td>275–284</td><td>20</td></tr>
+              <tr><td class="mono">C</td><td>285–294</td><td>21</td></tr>
+              <tr><td class="mono">C</td><td>295–304</td><td>22</td></tr>
+              <tr><td class="mono">C</td><td>305–314</td><td>23</td></tr>
+              <tr><td class="mono">C</td><td>315–324</td><td>24</td></tr>
+              <tr><td class="mono">C</td><td>325–334</td><td>25</td></tr>
+              <tr><td class="mono">C</td><td>334–345</td><td>26</td></tr>
+              <tr><td class="mono">C</td><td>345–354</td><td>27</td></tr>
+              <tr><td class="mono">C</td><td>355–364</td><td>28</td></tr>
+              <tr><td class="mono">C</td><td>365–374</td><td>29</td></tr>
+              <tr><td class="mono">C</td><td>375–384</td><td>30</td></tr>
+              <tr><td class="mono">C</td><td>385–390</td><td>31</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <p class="referenceNote">
+          Reference tables shown for clarity only (educational reconstruction). Verify against local protocol before clinical use.
+        </p>
+      </details>
+    </div>
   </div>
 
 <script>
@@ -244,7 +365,9 @@
   }
 
   function num(v) {
-    const n = Number(String(v).trim());
+    const s = String(v).trim();
+    if (s === "") return null;
+    const n = Number(s);
     return Number.isFinite(n) ? n : null;
   }
 
@@ -275,7 +398,6 @@
         action: "Immediately stop insulin infusion and initiate hypoglycemia management per protocol. Notify provider.",
         recheck: "Recheck BG every 15 minutes and repeat treatment until BG >70. Follow re-initiation guidance after required waiting period per policy.",
         notes: "This tool does not compute dextrose dosing. Follow institutional hypoglycemia protocol.",
-        tableInfo: null,
         overrideUsed: false,
         overrideNote: "",
         notifyNote: ""
@@ -291,7 +413,6 @@
         action: "Hold infusion.",
         recheck: "Recheck BG in 30 minutes, then every 1 hour for 4 hours.",
         notes: "Restart insulin drip on Scale A if BG is >150 mg/dL during that time.",
-        tableInfo: null,
         overrideUsed: false,
         overrideNote: "",
         notifyNote: ""
@@ -357,7 +478,6 @@
       notes: table
         ? `Table match: Scale ${ns}, BG ${table.lo}–${table.hi} → ${table.rate} U/hr.`
         : "BG outside configured table; consult provider/protocol.",
-      tableInfo: table,
       overrideUsed,
       overrideNote,
       notifyNote
@@ -377,7 +497,7 @@
     $out.innerHTML = html;
   }
 
-  document.getElementById("calc").addEventListener("click", () => {
+  function runCalc() {
     const currScale = $scale.value;
     const currRate = num($rate.value);
     const prevBG = num($prev.value);
@@ -416,9 +536,9 @@
       <p class="small">${rec.notes}</p>
       ${rec.overrideUsed ? `<div class="dangerBox"><div class="danger">WARNING</div>${rec.overrideNote}<br/>${rec.notifyNote}</div>` : ``}
     `);
-  });
+  }
 
-  document.getElementById("reset").addEventListener("click", () => {
+  function runReset() {
     $rate.value = "";
     $prev.value = "";
     $curr.value = "";
@@ -426,10 +546,17 @@
     $sameScale.checked = true;
     $out.style.display = "none";
     $out.innerHTML = "";
+  }
+
+  // ✅ iPhone reliability: listen to pointer/touch/click
+  const calcBtn = document.getElementById("calc");
+  const resetBtn = document.getElementById("reset");
+
+  ["pointerup", "touchend", "click"].forEach(evt => {
+    calcBtn.addEventListener(evt, (e) => { e.preventDefault(); runCalc(); }, { passive: false });
+    resetBtn.addEventListener(evt, (e) => { e.preventDefault(); runReset(); }, { passive: false });
   });
 })();
 </script>
 </body>
 </html>
-
-
